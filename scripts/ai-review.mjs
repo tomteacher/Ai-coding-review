@@ -69,7 +69,7 @@ fs.mkdirSync(dir, { recursive: true })
 const filePath = `${dir}/push-${shortCommit}-${date}.md`
 const doc = `# AI 代码审查报告
 
-- PR: #${prNumber}
+- 提交: ${shortCommit}
 - 日期: ${date}
 - 结论: ${isFail ? '❌ 不通过（需修改）' : '✅ 通过'}
 
