@@ -1,0 +1,53 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    branches:
+      - feature
+      - dev
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write        # 把报告 push 回 PR 的 head 分支
+  pull-requests: write   # 预留：以后可在 PR 上发评论
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    # 跳过带 [skip review] 的提交，防止脚本 push 报告后再次触发
+    if: ${{ !contains(github.event.pull_request.title || '', '[skip review]') }}
+
+    steps:
+      - name: 拉取 PR head 分支（含完整历史，为了算 diff）
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0
+
+      # 二次保险：检查最新 commit 是否带 [skip review]
+      - name: 检查是否需要跳过
+        id: skip_check
+        run: |
+          MSG=$(git log -1 --format=%s)
+          if echo "$MSG" | grep -q "\[skip review\]"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 安装 Node.js
+        if: steps.skip_check.outputs.skip == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 运行 AI 代码审查
+        if: steps.skip_check.outputs.skip == 'false'
+        env:
+          BEFORE_SHA: ${{ github.event.pull_request.base.sha }}
+          AFTER_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: node scripts/ai-review.mjs

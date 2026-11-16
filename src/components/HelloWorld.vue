@@ -93,3 +93,7 @@ const count = ref(0)
   <div class="ticks"></div>
   <section id="spacer"></section>
 </template>
+<script setup>
+const count = ref()
+中文
+</script>
