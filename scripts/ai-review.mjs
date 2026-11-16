@@ -3,8 +3,11 @@ import fs from 'node:fs'
 
 // ===== 1. 只拿 PR 的 diff（对比 main，不是全局代码） =====
 console.log('📥 获取代码变更 diff...')
-execSync('git fetch origin main --quiet')
-const diff = execSync('git diff origin/main...HEAD', {
+// 只审查这次 push 的改动（before → after），而不是整个分支相对 main 的累积 diff
+// execSync('git fetch origin main --quiet') //这是为了确保有最新的 main 分支代码
+const before = process.env.BEFORE_SHA
+const after = process.env.AFTER_SHA
+const diff = execSync(`git diff ${before}...${after}`, {
   maxBuffer: 10 * 1024 * 1024, // 防止 diff 太大撑爆缓冲区
 }).toString()
 
@@ -58,11 +61,12 @@ const isFail = /STATUS:\s*FAIL/.test(review)
 
 // ===== 5. 生成独立文档 =====
 const date = new Date().toISOString().slice(0, 10)
-const prNumber = process.env.PR_NUMBER || 'unknown'
+const commit = process.env.AFTER_SHA || 'unknown'
+const shortCommit = commit.slice(0, 7)   // 取 commit 前 7 位做标识
 const dir = 'docs/ai-review'
 fs.mkdirSync(dir, { recursive: true })
 
-const filePath = `${dir}/PR-${prNumber}-${date}.md`
+const filePath = `${dir}/push-${shortCommit}-${date}.md`
 const doc = `# AI 代码审查报告
 
 - PR: #${prNumber}

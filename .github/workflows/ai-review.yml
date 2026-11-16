@@ -2,8 +2,11 @@ name: AI Code Review
 
 on:
   # 触发时机：PR 创建时 + PR 分支推送新代码时
-  pull_request:
-    types: [opened, synchronize]
+  on:
+  push:
+    branches:
+      - feature     # 你们的共享开发分支名，按实际改
+      - dev         # 如果有多个共享分支，都列上
 
 permissions:
   contents: write        # 允许把审查报告 push 回 PR 分支
@@ -33,6 +36,7 @@ jobs:
 
       - name: 运行 AI 代码审查
         env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: node scripts/ai-review.mjs
